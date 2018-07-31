@@ -1,45 +1,61 @@
-var config = require("./config.js");
-var proxy = require('express-http-proxy');
-var app = require('express')();
-var download = require('download-to-file');
-var URL = require('url-parse');
+const config = require("./config.js");
+const app = require('express')();
+const URL = require('url-parse');
+const fs = require('fs');
+const http = require('http');
+const mkdirp = require('mkdirp');
 
-/*
-console.log('Downloading to /tmp/example.html')
-download('http://example.com/', '/tmp/example.html', function (err, filepath) {
-  if (err) throw err
-  console.log('Download finished:', filepath)
-})
-
-*/
+function download(options, dest, callback) {
+    var file = fs.createWriteStream(dest);
+    var request = http.get(options, function (response) {
+        response.pipe(file);
+        file.on('finish', function () {
+            file.close(callback);
+        });
+        file.on('error', function (err) {
+            fs.unlink(dest);
+            if (callback)
+                callback(err.message);
+        });
+    });
+}
 var CacheCheck = function(req, res, next)
 {
   var url = new URL(req.url);
   var filepath = url.pathname.match(/(.*)media_/)[1];
-  var filenumber = url.pathname.match(/media_(.*).ts/)[1];
+  var filenumber = parseInt(url.pathname.match(/media_(.*).ts/)[1]);
   console.log("Pathname:" + url.pathname);
   console.log("Query:" + url.query);
   console.log("Filepath:" + filepath);
   console.log("Filenumber:" + filenumber);
-  // call async download here
-  /*
-  for(var i = filenumber; i < filenumber+20; i++) {
-    // check if the file exist first
+//  if (!fs.existsSync(config.cachedir + filepath)) {
+    mkdirp(config.cachedir + filepath, function (err) {
+    if (err) console.error(err)
+    else console.log("Create Cache Path:" + config.cachedir + filepath);
+    });
+//  }
+
+  for(i = filenumber; i < filenumber + config.cachesize; i++) {
     var downloadpath = filepath + "media_" + i + ".ts";
-    console.log("Downloadpath:" + downloadpath)
-    download('http://' + config.proxyhost + downloadpath, downloadpath, function (err, filepath) {
-      if (err) throw err
-      console.log('Download finished:', filepath)
-    })
-  */
-  // if there's cache file
-  //res.send("test");
-  // if not
-  next();
+    if (!fs.existsSync(config.cachedir + downloadpath)) {
+      console.log("Download:" + downloadpath);
+      var src = downloadpath + url.query;
+      var dest = config.cachedir + downloadpath;
+      var options = {
+        host: config.proxyhost,
+        port: 80,
+        path: src,
+        method: 'GET',
+        headers: {
+          Host: req.hostname
+        }
+      }
+      download(options, dest);
+    }
+  }
+res.sendFile(config.cachedir + url.pathname);
 }
 
-app.use('/', CacheCheck, proxy(config.proxyhost, {
-  preserveHostHdr: true
-}));
+app.use('/', CacheCheck);
 
-app.listen(3000, () => console.log('listening..'));
+app.listen(config.port, () => console.log('Listening..'));
