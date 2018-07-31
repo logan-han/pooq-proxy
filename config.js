@@ -1,7 +1,7 @@
 var config = {
   proxyhost: "blah",
   cachedir: "/tmp/pooq",
-  cachesize: 5,
+  cachesize: 10,
   port: 3000,
 };
 

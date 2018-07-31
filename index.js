@@ -19,26 +19,25 @@ function download(options, dest, callback) {
         });
     });
 }
-var CacheCheck = function(req, res, next)
-{
+
+function CacheCheck(req, res) {
   var url = new URL(req.url);
   var filepath = url.pathname.match(/(.*)media_/)[1];
   var filenumber = parseInt(url.pathname.match(/media_(.*).ts/)[1]);
+/*
   console.log("Pathname:" + url.pathname);
   console.log("Query:" + url.query);
   console.log("Filepath:" + filepath);
   console.log("Filenumber:" + filenumber);
-//  if (!fs.existsSync(config.cachedir + filepath)) {
-    mkdirp(config.cachedir + filepath, function (err) {
-    if (err) console.error(err)
-    else console.log("Create Cache Path:" + config.cachedir + filepath);
-    });
-//  }
-
+*/
+  if (!fs.existsSync(config.cachedir + filepath)) {
+    console.log("cache directory created");
+    mkdirp.sync(config.cachedir + filepath);
+  }
   for(i = filenumber; i < filenumber + config.cachesize; i++) {
     var downloadpath = filepath + "media_" + i + ".ts";
     if (!fs.existsSync(config.cachedir + downloadpath)) {
-      console.log("Download:" + downloadpath);
+      console.log("Downloading:" + downloadpath);
       var src = downloadpath + url.query;
       var dest = config.cachedir + downloadpath;
       var options = {
@@ -53,6 +52,7 @@ var CacheCheck = function(req, res, next)
       download(options, dest);
     }
   }
+console.log("Serving:" + config.cachedir + url.pathname);
 res.sendFile(config.cachedir + url.pathname);
 }
 
