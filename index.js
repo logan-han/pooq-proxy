@@ -20,10 +20,20 @@ function download(options, dest, callback) {
     });
 }
 
+function FindCacheableFileNumber(filepath,filenumber) {
+  max_depth = filenumber + config.cachesize;
+  for(i = filenumber; i < max_depth; i++) {
+    var downloadpath = filepath + "media_" + filenumber + ".ts";
+    if (fs.existsSync(config.cachedir + filepath + "media_" + i + ".ts")) filenumber++;
+  }
+  return filenumber;
+}
+
 function CacheCheck(req, res) {
   var url = new URL(req.url);
   var filepath = url.pathname.match(/(.*)media_/)[1];
   var filenumber = parseInt(url.pathname.match(/media_(.*).ts/)[1]);
+  var cacheablefilenumber = FindCacheableFileNumber(filepath,filenumber);
 /*
   console.log("Pathname:" + url.pathname);
   console.log("Query:" + url.query);
@@ -34,10 +44,9 @@ function CacheCheck(req, res) {
     console.log("cache directory created");
     mkdirp.sync(config.cachedir + filepath);
   }
-  for(i = filenumber; i < filenumber + config.cachesize; i++) {
+  for(i = cacheablefilenumber; i < cacheablefilenumber + config.cachesize; i++) {
     var downloadpath = filepath + "media_" + i + ".ts";
     if (!fs.existsSync(config.cachedir + downloadpath)) {
-      console.log("Downloading:" + downloadpath);
       var src = downloadpath + url.query;
       var dest = config.cachedir + downloadpath;
       var options = {
@@ -49,7 +58,11 @@ function CacheCheck(req, res) {
           Host: req.hostname
         }
       }
-      download(options, dest);
+      download(options, dest,
+      function(error, data, response) {
+        if (error) console.error(error);
+        else console.log("Downloaded:" + downloadpath);
+      });
     }
   }
 console.log("Serving:" + config.cachedir + url.pathname);
