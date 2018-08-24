@@ -34,14 +34,8 @@ function CacheCheck(req, res) {
   var filepath = url.pathname.match(/(.*)media_/)[1];
   var filenumber = parseInt(url.pathname.match(/media_(.*).ts/)[1]);
   var cacheablefilenumber = FindCacheableFileNumber(filepath,filenumber);
-/*
-  console.log("Pathname:" + url.pathname);
-  console.log("Query:" + url.query);
-  console.log("Filepath:" + filepath);
-  console.log("Filenumber:" + filenumber);
-*/
   if (!fs.existsSync(config.cachedir + filepath)) {
-    console.log("cache directory created");
+    if (config.debug == true) console.log(config.cachedir + filepath + "directory created");
     mkdirp.sync(config.cachedir + filepath);
   }
   for(i = cacheablefilenumber; i < cacheablefilenumber + config.cachesize; i++) {
@@ -61,7 +55,7 @@ function CacheCheck(req, res) {
       download(options, dest,
       function(error, data, response) {
         if (error) console.error(error);
-        else console.log("Downloaded:" + downloadpath);
+        else if (config.debug == true) console.log("Downloaded:" + downloadpath);
       });
     }
   }
@@ -71,4 +65,4 @@ res.sendFile(config.cachedir + url.pathname);
 
 app.use('/', CacheCheck);
 
-app.listen(config.port, () => console.log('Listening..'));
+app.listen(config.port, () => console.log('Pooq Proxy Ready'));
